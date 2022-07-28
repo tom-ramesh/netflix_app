@@ -1,6 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:netflix_app/application/new_and_hot/newandhot_bloc.dart';
 import 'package:netflix_app/core/colors/colors.dart';
 import 'package:netflix_app/core/constants.dart';
+import 'package:netflix_app/domain/core/api_endpoints.dart';
 import 'package:netflix_app/presentation/new_and_hot/widgets/comming_soon_widget.dart';
 import 'package:netflix_app/presentation/new_and_hot/widgets/everyones_watching_widget.dart';
 
@@ -59,28 +65,147 @@ class ScreenNewAndHot extends StatelessWidget {
             ),
           ),
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
-            _buildCommingSoon(),
-            _buildEveryonesWatching(),
+            CommingSoonList(
+              key: Key('commingSoon'),
+            ),
+            EveryOnesWatchingList(
+              key: Key('everyonesWatching'),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildCommingSoon() {
-    return ListView.builder(
-      itemCount: 10,
-      itemBuilder: (BuildContext context, index) => const CommingSoonWidget(),
+class CommingSoonList extends StatelessWidget {
+  const CommingSoonList({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance!.addPostFrameCallback((timestamp) {
+      BlocProvider.of<NewAndHotBloc>(context)
+          .add(const NewandhotEvent.loadDataInComingSoon());
+    });
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        BlocProvider.of<NewAndHotBloc>(context)
+            .add(const NewandhotEvent.loadDataInComingSoon());
+      },
+      child: BlocBuilder<NewAndHotBloc, NewandHotState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+              ),
+            );
+          } else if (state.hasError) {
+            return const Center(
+              child: Text('Error While loading comming soon list'),
+            );
+          } else if (state.commingSoonList.isEmpty) {
+            return const Center(
+              child: Text('Comming soon list is empty'),
+            );
+          } else {
+            return ListView.builder(
+                itemCount: state.commingSoonList.length,
+                itemBuilder: (BuildContext context, index) {
+                  final movie = state.commingSoonList[index];
+
+                  if (movie.id == null) {
+                    return const SizedBox();
+                  }
+
+                  String month = '';
+                  String date = '';
+
+                  try {
+                    final _date = DateTime.tryParse(movie.releaseDate!);
+                    final formatedDate =
+                        DateFormat.yMMMMd('en_US').format(_date!);
+
+                    month = formatedDate
+                        .split(' ')
+                        .first
+                        .substring(0, 3)
+                        .toUpperCase();
+
+                    date = movie.releaseDate!.split('-')[1];
+                  } catch (_) {
+                    month = "";
+                    date = "";
+                  }
+
+                  return CommingSoonWidget(
+                      id: movie.id.toString(),
+                      month: month,
+                      day: date,
+                      posterPath: '${ApiEndPoints.imgUrl}${movie.posterPath}',
+                      movieName: movie.title ?? 'No Title',
+                      description: movie.overview ?? 'No Description');
+                });
+          }
+        },
+      ),
     );
   }
+}
 
-  Widget _buildEveryonesWatching() {
-    return ListView.builder(
-      itemBuilder: (BuildContext context, index) =>
-          const EveryonesWatchingWidget(),
-      itemCount: 10,
+class EveryOnesWatchingList extends StatelessWidget {
+  const EveryOnesWatchingList({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance!.addPostFrameCallback((timestamp) {
+      BlocProvider.of<NewAndHotBloc>(context)
+          .add(const NewandhotEvent.loadDataInEveryonesWatching());
+    });
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        BlocProvider.of<NewAndHotBloc>(context)
+            .add(const NewandhotEvent.loadDataInEveryonesWatching());
+      },
+      child: BlocBuilder<NewAndHotBloc, NewandHotState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+              ),
+            );
+          } else if (state.hasError) {
+            return const Center(
+              child: Text('Error While loading comming soon list'),
+            );
+          } else if (state.eveyOnesWatchingList.isEmpty) {
+            return const Center(
+              child: Text('Comming soon list is empty'),
+            );
+          } else {
+            return ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: state.eveyOnesWatchingList.length,
+                itemBuilder: (BuildContext context, index) {
+                  final tv = state.eveyOnesWatchingList[index];
+
+                  if (tv.id == null) {
+                    return const SizedBox();
+                  }
+                  log(tv.originalTitle.toString());
+                  return EveryonesWatchingWidget(
+                      posterPath: '${ApiEndPoints.imgUrl}${tv.posterPath}',
+                      movieName: tv.originalName ?? 'No name provided',
+                      description: tv.overview ?? 'No description');
+                });
+          }
+        },
+      ),
     );
   }
 }

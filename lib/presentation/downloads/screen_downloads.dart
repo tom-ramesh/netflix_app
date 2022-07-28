@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:netflix_app/application/downloads/downloads_bloc.dart';
 import 'package:netflix_app/core/colors/colors.dart';
 import 'package:netflix_app/core/constants.dart';
+import 'package:netflix_app/domain/core/api_endpoints.dart';
 import 'package:netflix_app/presentation/downloads/widgets/downloads_image_widget.dart';
 import 'package:netflix_app/presentation/widgets/app_bar_widget.dart';
 
@@ -54,16 +57,16 @@ class _SmartDownloads extends StatelessWidget {
 }
 
 class _Section2 extends StatelessWidget {
-  _Section2({Key? key}) : super(key: key);
-
-  final List imageList = [
-    "https://www.themoviedb.org/t/p/w220_and_h330_face/tlZpSxYuBRoVJBOpUrPdQe9FmFq.jpg",
-    "https://www.themoviedb.org/t/p/w220_and_h330_face/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-    "https://www.themoviedb.org/t/p/w220_and_h330_face/wFjboE0aFZNbVOF05fzrka9Fqyx.jpg",
-  ];
+  const _Section2({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance!.addPostFrameCallback((timeStamp) {
+      BlocProvider.of<DownloadsBloc>(context).add(
+        const DownloadsEvent.getDownloadsImages(),
+      );
+    });
+
     final Size size = MediaQuery.of(context).size;
 
     return Column(
@@ -86,55 +89,69 @@ class _Section2 extends StatelessWidget {
             color: Colors.grey,
           ),
         ),
-        SizedBox(
-          width: size.width,
-          height: size.width,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: CircleAvatar(
-                  radius: size.width * 0.4,
-                  backgroundColor: Colors.grey.withOpacity(0.5),
-                ),
-              ),
-              DownloadsImageWidget(
-                imageList: imageList[0],
-                margin: const EdgeInsets.only(
-                  left: 155,
-                  top: 35,
-                ),
-                angle: 30,
-                size: Size(
-                  size.width * 0.45,
-                  size.width * 0.5,
-                ),
-              ),
-              DownloadsImageWidget(
-                imageList: imageList[1],
-                margin: const EdgeInsets.only(
-                  right: 155,
-                  top: 35,
-                ),
-                angle: -30,
-                size: Size(
-                  size.width * 0.45,
-                  size.width * 0.5,
-                ),
-              ),
-              DownloadsImageWidget(
-                imageList: imageList[2],
-                margin: const EdgeInsets.only(
-                  top: 35,
-                ),
-                size: Size(
-                  size.width * 0.45,
-                  size.width * 0.65,
-                ),
-                radius: 10,
-              ),
-            ],
-          ),
+        BlocBuilder<DownloadsBloc, DownloadsState>(
+          builder: (context, state) {
+            return SizedBox(
+              width: size.width,
+              height: size.width,
+              child: state.isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: CircleAvatar(
+                            radius: size.width * 0.4,
+                            backgroundColor: Colors.grey.withOpacity(0.5),
+                          ),
+                        ),
+                        DownloadsImageWidget(
+                          imageList: state.downloads!.isNotEmpty
+                              ? '${ApiEndPoints.imgUrl}${state.downloads![0].posterPath}'
+                              : "",
+                          margin: const EdgeInsets.only(
+                            left: 155,
+                            top: 35,
+                          ),
+                          angle: 30,
+                          size: Size(
+                            size.width * 0.45,
+                            size.width * 0.5,
+                          ),
+                        ),
+                        DownloadsImageWidget(
+                          imageList: state.downloads!.isNotEmpty
+                              ? '${ApiEndPoints.imgUrl}${state.downloads![1].posterPath}'
+                              : '',
+                          margin: const EdgeInsets.only(
+                            right: 155,
+                            top: 35,
+                          ),
+                          angle: -30,
+                          size: Size(
+                            size.width * 0.45,
+                            size.width * 0.5,
+                          ),
+                        ),
+                        DownloadsImageWidget(
+                          imageList: state.downloads!.isNotEmpty
+                              ? '${ApiEndPoints.imgUrl}${state.downloads![2].posterPath}'
+                              : '',
+                          margin: const EdgeInsets.only(
+                            top: 35,
+                          ),
+                          size: Size(
+                            size.width * 0.45,
+                            size.width * 0.65,
+                          ),
+                          radius: 10,
+                        ),
+                      ],
+                    ),
+            );
+          },
         ),
       ],
     );
